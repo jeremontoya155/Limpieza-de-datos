@@ -17,17 +17,45 @@ class DataframeViewer:
         self.create_widgets()
     
     def create_widgets(self):
-        # Botón para seleccionar archivo
-        self.select_button = tk.Button(self.root, text="Seleccionar Archivo", command=self.select_file)
+        # Crear un Notebook para las pestañas
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill="both", expand=True)
+        
+        # Agregar la primera pestaña para la visualización del DataFrame
+        self.tab1 = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab1, text="Visualización")
+        
+        # Botón para seleccionar archivo en la primera pestaña
+        self.select_button = tk.Button(self.tab1, text="Seleccionar Archivo", command=self.select_file)
         self.select_button.pack(pady=10)
         
-        # Árbol para mostrar el DataFrame
-        self.tree = ttk.Treeview(self.root)
+        # Árbol para mostrar el DataFrame en la primera pestaña
+        self.tree = ttk.Treeview(self.tab1)
         self.tree["columns"] = ()
         self.tree.pack(pady=5)
         
-        # Botón para descargar el DataFrame
-        self.download_button = tk.Button(self.root, text="Descargar DataFrame", command=self.download_dataframe)
+        # Agregar la segunda pestaña para la edición y filtrado del DataFrame
+        self.tab2 = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab2, text="Edición y Filtrado")
+        
+        # Etiqueta y entrada para seleccionar columna en la segunda pestaña
+        self.column_label = tk.Label(self.tab2, text="Seleccionar Columna:")
+        self.column_label.pack()
+        self.column_entry = tk.Entry(self.tab2)
+        self.column_entry.pack()
+        
+        # Etiqueta y entrada para filtrar por cantidad en la segunda pestaña
+        self.filter_label = tk.Label(self.tab2, text="Filtrar por Cantidad:")
+        self.filter_label.pack()
+        self.filter_entry = tk.Entry(self.tab2)
+        self.filter_entry.pack()
+        
+        # Botón para aplicar filtro en la segunda pestaña
+        self.filter_button = tk.Button(self.tab2, text="Aplicar Filtro", command=self.apply_filter)
+        self.filter_button.pack()
+        
+        # Botón para descargar el DataFrame en la segunda pestaña
+        self.download_button = tk.Button(self.tab2, text="Descargar DataFrame", command=self.download_dataframe)
         self.download_button.pack(pady=10)
         
     def select_file(self):
@@ -49,21 +77,61 @@ class DataframeViewer:
                 messagebox.showwarning("Formato no válido", "El archivo seleccionado no tiene un formato válido.")
                 return
             
-            # Limpiar árbol antes de cargar datos
+            # Limpiar árbol antes de cargar datos en la primera pestaña
             for child in self.tree.get_children():
                 self.tree.delete(child)
             
-            # Definir columnas del árbol
+            # Definir columnas del árbol en la primera pestaña
             self.tree["columns"] = tuple(self.dataframe.columns)
             for col in self.tree["columns"]:
                 self.tree.heading(col, text=col)
             
-            # Insertar datos en el árbol
+            # Insertar datos en el árbol en la primera pestaña
             for index, row in self.dataframe.iterrows():
                 self.tree.insert("", tk.END, values=tuple(row))
             
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cargar el DataFrame: {str(e)}")
+    
+    def apply_filter(self):
+        if self.dataframe is None:
+            messagebox.showwarning("DataFrame no cargado", "Primero debe cargar un DataFrame antes de aplicar el filtro.")
+            return
+        
+        try:
+            # Obtener la columna y el valor del filtro
+            column_name = self.column_entry.get()
+            if not column_name:
+                messagebox.showwarning("Columna no especificada", "Por favor ingrese el nombre de la columna.")
+                return
+            
+            filter_value = self.filter_entry.get()
+            if not filter_value:
+                messagebox.showwarning("Valor no especificado", "Por favor ingrese un valor para aplicar el filtro.")
+                return
+            
+            filter_value = float(filter_value)  # Convertir a float para comparación
+            
+            # Aplicar filtro
+            self.dataframe = self.dataframe[self.dataframe[column_name] == filter_value]
+            
+            # Limpiar árbol antes de cargar datos en la primera pestaña
+            for child in self.tree.get_children():
+                self.tree.delete(child)
+            
+            # Definir columnas del árbol en la primera pestaña
+            self.tree["columns"] = tuple(self.dataframe.columns)
+            for col in self.tree["columns"]:
+                self.tree.heading(col, text=col)
+            
+            # Insertar datos en el árbol en la primera pestaña
+            for index, row in self.dataframe.iterrows():
+                self.tree.insert("", tk.END, values=tuple(row))
+            
+        except ValueError:
+            messagebox.showwarning("Valor no válido", "Por favor ingrese un valor numérico para aplicar el filtro.")
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo aplicar el filtro: {str(e)}")
     
     def download_dataframe(self):
         if self.dataframe is None:
@@ -98,4 +166,5 @@ class DataframeViewer:
 root = tk.Tk()
 app = DataframeViewer(root)
 root.mainloop()
+
 
