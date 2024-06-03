@@ -1,6 +1,7 @@
 import pandas as pd
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import ttk
 from tkinter import messagebox
 
 class DataframeViewer:
@@ -10,6 +11,8 @@ class DataframeViewer:
         
         self.file_path = ""
         self.dataframe = None
+        self.format_selected = tk.StringVar()
+        self.format_selected.set(".csv")  # Establecer CSV como formato predeterminado
         
         self.create_widgets()
     
@@ -18,24 +21,17 @@ class DataframeViewer:
         self.select_button = tk.Button(self.root, text="Seleccionar Archivo", command=self.select_file)
         self.select_button.pack(pady=10)
         
-        # Etiqueta para mostrar el DataFrame
-        self.dataframe_label = tk.Label(self.root, text="DataFrame:")
-        self.dataframe_label.pack(pady=5)
+        # Árbol para mostrar el DataFrame
+        self.tree = ttk.Treeview(self.root)
+        self.tree["columns"] = ()
+        self.tree.pack(pady=5)
         
-        # Cuadro de texto para mostrar el DataFrame
-        self.dataframe_text = tk.Text(self.root, height=10, width=50)
-        self.dataframe_text.pack(pady=5)
-        
-        # Botón para descargar el DataFrame en diferentes formatos
+        # Botón para descargar el DataFrame
         self.download_button = tk.Button(self.root, text="Descargar DataFrame", command=self.download_dataframe)
         self.download_button.pack(pady=10)
-    
+        
     def select_file(self):
-        self.file_path = filedialog.askopenfilename(filetypes=(("CSV files", "*.csv"),
-                                                               ("Excel files", "*.xlsx;*.xls"),
-                                                               ("JSON files", "*.json"),
-                                                               ("Text files", "*.txt"),
-                                                               ("All files", "*.*")))
+        self.file_path = filedialog.askopenfilename(filetypes=(("All files", "*.*"),))
         if self.file_path:
             self.load_dataframe()
     
@@ -53,9 +49,18 @@ class DataframeViewer:
                 messagebox.showwarning("Formato no válido", "El archivo seleccionado no tiene un formato válido.")
                 return
             
-            # Mostrar el DataFrame en el cuadro de texto
-            self.dataframe_text.delete(1.0, tk.END)
-            self.dataframe_text.insert(tk.END, self.dataframe.to_string())
+            # Limpiar árbol antes de cargar datos
+            for child in self.tree.get_children():
+                self.tree.delete(child)
+            
+            # Definir columnas del árbol
+            self.tree["columns"] = tuple(self.dataframe.columns)
+            for col in self.tree["columns"]:
+                self.tree.heading(col, text=col)
+            
+            # Insertar datos en el árbol
+            for index, row in self.dataframe.iterrows():
+                self.tree.insert("", tk.END, values=tuple(row))
             
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cargar el DataFrame: {str(e)}")
@@ -67,7 +72,7 @@ class DataframeViewer:
         
         try:
             # Diálogo para seleccionar la ubicación de guardado
-            save_path = filedialog.asksaveasfilename(defaultextension=".csv",
+            save_path = filedialog.asksaveasfilename(defaultextension=self.format_selected.get(),
                                                       filetypes=(("CSV files", "*.csv"),
                                                                  ("Excel files", "*.xlsx"),
                                                                  ("JSON files", "*.json"),
@@ -79,11 +84,13 @@ class DataframeViewer:
                 elif save_path.endswith('.xlsx'):
                     self.dataframe.to_excel(save_path, index=False)
                 elif save_path.endswith('.json'):
-                    self.dataframe.to_json(save_path, orient='records', lines=True)
+                    self.dataframe.to_json(save_path, orient='records')
                 elif save_path.endswith('.txt'):
                     self.dataframe.to_csv(save_path, sep='\t', index=False)
                 else:
                     messagebox.showwarning("Formato no válido", "El formato seleccionado no es válido.")
+                messagebox.showinfo("Archivo guardado", f"El archivo se ha guardado en: {save_path}")
+                
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo descargar el DataFrame: {str(e)}")
 
@@ -91,3 +98,4 @@ class DataframeViewer:
 root = tk.Tk()
 app = DataframeViewer(root)
 root.mainloop()
+
