@@ -56,7 +56,7 @@ class DataframeViewer:
         self.delete_button.pack(pady=5)
         
         # Etiqueta y entrada para filtrar por cantidad
-        self.filter_label = tk.Label(self.root, text="Seleccionar valores de:")
+        self.filter_label = tk.Label(self.root, text="Filtrar por Cantidad:")
         self.filter_label.pack()
         self.filter_entry = tk.Entry(self.root)
         self.filter_entry.pack()
@@ -72,6 +72,10 @@ class DataframeViewer:
         # Botón para normalizar los datos de la columna seleccionada
         self.normalize_button = tk.Button(self.root, text="Normalizar Datos", command=self.normalize_data)
         self.normalize_button.pack(pady=5)
+        
+        # Botón para manejar valores nulos
+        self.handle_nulls_button = tk.Button(self.root, text="Manejar Valores Nulos", command=self.handle_nulls)
+        self.handle_nulls_button.pack(pady=5)
         
         # Botón para descargar el DataFrame
         self.download_button = tk.Button(self.root, text="Descargar DataFrame", command=self.download_dataframe)
@@ -198,7 +202,6 @@ class DataframeViewer:
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo eliminar la columna: {str(e)}")
     
-    
     def remove_duplicates(self):
         if self.dataframe is None:
             messagebox.showwarning("DataFrame no cargado", "Primero debe cargar un DataFrame antes de eliminar duplicados.")
@@ -222,9 +225,8 @@ class DataframeViewer:
         for child in self.tree.get_children():
             self.tree.delete(child)
         
-        # Definir columnas del árbol
+        # Definir nuevas columnas del árbol
         self.tree["columns"] = tuple(dataframe.columns)
-        self.tree["show"] = "headings"
         for col in self.tree["columns"]:
             self.tree.heading(col, text=col)
             self.tree.column(col, width=100)
@@ -300,6 +302,45 @@ class DataframeViewer:
         except ValueError as e:
             messagebox.showerror("Error de conversión", f"No se pudo convertir la columna '{column_name}' a fecha larga: {e}")
 
+    def handle_nulls(self):
+        if self.dataframe is None:
+            messagebox.showwarning("DataFrame no cargado", "Primero debe cargar un DataFrame antes de manejar los valores nulos.")
+            return
+        
+        # Obtener la columna seleccionada
+        column_name = self.column_menu.get()
+        
+        # Menú desplegable para seleccionar cómo manejar los valores nulos
+        handle_options = ["Eliminar Filas con Nulos", "Rellenar con un Valor", "Dejar Nulos"]
+        selected_option = tk.StringVar()
+        selected_option.set(handle_options[0])  # Establecer la opción predeterminada
+        
+        # Función para manejar los valores nulos
+        def apply_handle_nulls():
+            option = selected_option.get()
+            if option == "Eliminar Filas con Nulos":
+                self.dataframe = self.dataframe.dropna(subset=[column_name])
+            elif option == "Rellenar con un Valor":
+                fill_value = simpledialog.askstring("Rellenar con un Valor", f"Ingrese el valor con el cual desea rellenar los nulos en '{column_name}':")
+                self.dataframe[column_name] = self.dataframe[column_name].fillna(fill_value)
+            elif option == "Dejar Nulos":
+                pass
+            self.update_treeview()
+            handle_nulls_dialog.destroy()
+        
+        # Cuadro de diálogo para seleccionar la opción de manejo de nulos
+        handle_nulls_dialog = tk.Toplevel(self.root)
+        handle_nulls_dialog.title("Manejar Valores Nulos")
+        
+        option_label = tk.Label(handle_nulls_dialog, text="Seleccione una opción para manejar los valores nulos:")
+        option_label.pack()
+        
+        option_menu = tk.OptionMenu(handle_nulls_dialog, selected_option, *handle_options)
+        option_menu.pack()
+        
+        apply_button = tk.Button(handle_nulls_dialog, text="Aplicar", command=apply_handle_nulls)
+        apply_button.pack()
+    
     def update_treeview(self):
         # Limpiar árbol antes de cargar datos
         for child in self.tree.get_children():
