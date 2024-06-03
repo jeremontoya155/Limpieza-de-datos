@@ -8,6 +8,7 @@ class DataframeViewer:
     def __init__(self, root):
         self.root = root
         self.root.title("Dataframe Viewer")
+        
         # Obtener el ancho y alto de la pantalla
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
@@ -41,8 +42,6 @@ class DataframeViewer:
         self.tree_scroll.pack(side="right", fill="y")
         self.tree.configure(yscrollcommand=self.tree_scroll.set)
         
-  
-        
         # Etiqueta y menú desplegable para seleccionar columna
         self.column_label = tk.Label(self.root, text="Seleccionar Columna:")
         self.column_label.pack()
@@ -63,13 +62,16 @@ class DataframeViewer:
         self.filter_button = tk.Button(self.root, text="Aplicar Filtro", command=self.apply_filter)
         self.filter_button.pack(pady=5)
         
+        # Botón para eliminar duplicados de la columna seleccionada
+        self.remove_duplicates_button = tk.Button(self.root, text="Eliminar Duplicados", command=self.remove_duplicates)
+        self.remove_duplicates_button.pack(pady=5)
+        
         # Botón para descargar el DataFrame
         self.download_button = tk.Button(self.root, text="Descargar DataFrame", command=self.download_dataframe)
         self.download_button.pack(pady=10)
         
         # Menú desplegable para seleccionar el formato de descarga
         self.format_menu = ttk.Combobox(self.root, state="readonly", textvariable=self.format_selected)
-        
         self.format_menu["values"] = [".csv", ".xlsx", ".json", ".txt"]
         self.format_menu.pack(pady=10)
     
@@ -188,6 +190,57 @@ class DataframeViewer:
             
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo eliminar la columna: {str(e)}")
+    
+    
+    def remove_duplicates(self):
+        if self.dataframe is None:
+            messagebox.showwarning("DataFrame no cargado", "Primero debe cargar un DataFrame antes de eliminar duplicados.")
+            return
+        
+        try:
+            # Obtener la columna seleccionada
+            column_name = self.column_menu.get()
+            
+            # Eliminar los duplicados y mantener solo los valores únicos en la columna seleccionada
+            unique_df = self.dataframe.drop_duplicates(subset=[column_name])
+            
+            # Mostrar el DataFrame con los valores únicos
+            self.show_dataframe(unique_df)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron eliminar los duplicados: {str(e)}")
+
+            try:
+                # Obtener la columna seleccionada
+                column_name = self.column_menu.get()
+                
+                # Identificar los registros duplicados en la columna seleccionada
+                duplicates_mask = self.dataframe.duplicated(subset=[column_name], keep=False)
+                
+                # Filtrar el DataFrame original para mantener los registros duplicados
+                duplicates_df = self.dataframe[duplicates_mask]
+                
+                # Mostrar el DataFrame con los registros duplicados
+                self.show_dataframe(duplicates_df)
+                
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudieron eliminar los duplicados: {str(e)}")
+    
+    def show_dataframe(self, dataframe):
+        # Limpiar árbol antes de cargar datos
+        for child in self.tree.get_children():
+            self.tree.delete(child)
+        
+        # Definir columnas del árbol
+        self.tree["columns"] = tuple(dataframe.columns)
+        self.tree["show"] = "headings"
+        for col in self.tree["columns"]:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, width=100)
+        
+        # Insertar datos en el árbol
+        for index, row in dataframe.iterrows():
+            self.tree.insert("", tk.END, values=tuple(row))
     
     def download_dataframe(self):
         if self.dataframe is None:
