@@ -56,7 +56,7 @@ class DataframeViewer:
         self.delete_button.pack(pady=5)
         
         # Etiqueta y entrada para filtrar por cantidad
-        self.filter_label = tk.Label(self.root, text="Filtrar por Cantidad:")
+        self.filter_label = tk.Label(self.root, text="Seleccionar valores de:")
         self.filter_label.pack()
         self.filter_entry = tk.Entry(self.root)
         self.filter_entry.pack()
@@ -163,7 +163,7 @@ class DataframeViewer:
         except ValueError:
             messagebox.showwarning("Valor no válido", "Por favor ingrese un valor numérico para aplicar el filtro.")
         except Exception as e:
-            messagebox.showerror("Error", f"No se pudo aplicar el filtro:            {str(e)}")
+            messagebox.showerror("Error", f"No se pudo aplicar el filtro: {str(e)}")
     
     def delete_column(self):
         if self.dataframe is None:
@@ -242,7 +242,7 @@ class DataframeViewer:
         column_name = self.column_menu.get()
         
         # Menú desplegable para seleccionar el tipo de normalización
-        normalize_options = ["Convertir a Float", "Convertir a Fecha Corta", "Convertir a Fecha Larga"]
+        normalize_options = ["Convertir a Float", "Convertir a Int", "Convertir a Fecha Corta", "Convertir a Fecha Larga"]
         selected_option = tk.StringVar()
         selected_option.set(normalize_options[0])  # Establecer la opción predeterminada
         
@@ -251,6 +251,8 @@ class DataframeViewer:
             option = selected_option.get()
             if option == "Convertir a Float":
                 self.convert_to_float(column_name)
+            elif option == "Convertir a Int":
+                self.convert_to_int(column_name)
             elif option == "Convertir a Fecha Corta":
                 self.convert_to_short_date(column_name)
             elif option == "Convertir a Fecha Larga":
@@ -276,6 +278,13 @@ class DataframeViewer:
             self.update_treeview()
         except ValueError as e:
             messagebox.showerror("Error de conversión", f"No se pudo convertir la columna '{column_name}' a tipo float: {e}")
+
+    def convert_to_int(self, column_name):
+        try:
+            self.dataframe[column_name] = self.dataframe[column_name].astype(float).astype(int)
+            self.update_treeview()
+        except ValueError as e:
+            messagebox.showerror("Error de conversión", f"No se pudo convertir la columna '{column_name}' a tipo int: {e}")
 
     def convert_to_short_date(self, column_name):
         try:
@@ -333,4 +342,3 @@ class DataframeViewer:
 root = tk.Tk()
 app = DataframeViewer(root)
 root.mainloop()
-
