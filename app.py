@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
 from tkinter import messagebox
+from sklearn import preprocessingx
 
 class DataframeViewer:
     def __init__(self, root):
@@ -66,6 +67,16 @@ class DataframeViewer:
         self.remove_duplicates_button = tk.Button(self.root, text="Eliminar Duplicados", command=self.remove_duplicates)
         self.remove_duplicates_button.pack(pady=5)
         
+        # Botón para normalizar los datos
+        self.normalize_button = tk.Button(self.root, text="Normalizar Datos", command=self.normalize_data)
+        self.normalize_button.pack(pady=5)
+        
+        # Etiqueta y menú desplegable para seleccionar columna para normalización
+        self.normalize_column_label = tk.Label(self.root, text="Seleccionar Columna para Normalizar:")
+        self.normalize_column_label.pack()
+        self.normalize_column_menu = ttk.Combobox(self.root, state="readonly")
+        self.normalize_column_menu.pack()
+        
         # Botón para descargar el DataFrame
         self.download_button = tk.Button(self.root, text="Descargar DataFrame", command=self.download_dataframe)
         self.download_button.pack(pady=10)
@@ -112,6 +123,10 @@ class DataframeViewer:
             # Actualizar menú desplegable de columnas
             self.column_menu["values"] = self.tree["columns"]
             self.column_menu.current(0)
+            
+            # Actualizar menú desplegable de columnas para normalización
+            self.normalize_column_menu["values"] = self.tree["columns"]
+            self.normalize_column_menu.current(0)
             
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cargar el DataFrame: {str(e)}")
@@ -226,6 +241,28 @@ class DataframeViewer:
             except Exception as e:
                 messagebox.showerror("Error", f"No se pudieron eliminar los duplicados: {str(e)}")
     
+    def normalize_data(self):
+        if self.dataframe is None:
+            messagebox.showwarning("DataFrame no cargado", "Primero debe cargar un DataFrame antes de normalizar los datos.")
+            return
+        
+        try:
+            # Obtener la columna seleccionada para normalización
+            column_name = self.normalize_column_menu.get()
+            
+            # Normalizar los datos en la columna seleccionada
+            min_max_scaler = preprocessing.MinMaxScaler()
+            normalized_data = min_max_scaler.fit_transform(self.dataframe[[column_name]])
+            
+            # Actualizar el DataFrame con los datos normalizados
+            self.dataframe[column_name] = normalized_data
+            
+            # Mostrar el DataFrame actualizado
+            self.show_dataframe(self.dataframe)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo normalizar los datos: {str(e)}")
+    
     def show_dataframe(self, dataframe):
         # Limpiar árbol antes de cargar datos
         for child in self.tree.get_children():
@@ -275,3 +312,4 @@ class DataframeViewer:
 root = tk.Tk()
 app = DataframeViewer(root)
 root.mainloop()
+
