@@ -3,7 +3,9 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
 from tkinter import messagebox
-from sklearn import preprocessingx
+from tkinter import simpledialog
+from sklearn import preprocessing
+from datetime import datetime
 
 class DataframeViewer:
     def __init__(self, root):
@@ -67,15 +69,9 @@ class DataframeViewer:
         self.remove_duplicates_button = tk.Button(self.root, text="Eliminar Duplicados", command=self.remove_duplicates)
         self.remove_duplicates_button.pack(pady=5)
         
-        # Botón para normalizar los datos
+        # Botón para normalizar los datos de la columna seleccionada
         self.normalize_button = tk.Button(self.root, text="Normalizar Datos", command=self.normalize_data)
         self.normalize_button.pack(pady=5)
-        
-        # Etiqueta y menú desplegable para seleccionar columna para normalización
-        self.normalize_column_label = tk.Label(self.root, text="Seleccionar Columna para Normalizar:")
-        self.normalize_column_label.pack()
-        self.normalize_column_menu = ttk.Combobox(self.root, state="readonly")
-        self.normalize_column_menu.pack()
         
         # Botón para descargar el DataFrame
         self.download_button = tk.Button(self.root, text="Descargar DataFrame", command=self.download_dataframe)
@@ -124,10 +120,6 @@ class DataframeViewer:
             self.column_menu["values"] = self.tree["columns"]
             self.column_menu.current(0)
             
-            # Actualizar menú desplegable de columnas para normalización
-            self.normalize_column_menu["values"] = self.tree["columns"]
-            self.normalize_column_menu.current(0)
-            
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cargar el DataFrame: {str(e)}")
     
@@ -171,7 +163,7 @@ class DataframeViewer:
         except ValueError:
             messagebox.showwarning("Valor no válido", "Por favor ingrese un valor numérico para aplicar el filtro.")
         except Exception as e:
-            messagebox.showerror("Error", f"No se pudo aplicar el filtro: {str(e)}")
+            messagebox.showerror("Error", f"No se pudo aplicar el filtro:            {str(e)}")
     
     def delete_column(self):
         if self.dataframe is None:
@@ -224,44 +216,6 @@ class DataframeViewer:
             
         except Exception as e:
             messagebox.showerror("Error", f"No se pudieron eliminar los duplicados: {str(e)}")
-
-            try:
-                # Obtener la columna seleccionada
-                column_name = self.column_menu.get()
-                
-                # Identificar los registros duplicados en la columna seleccionada
-                duplicates_mask = self.dataframe.duplicated(subset=[column_name], keep=False)
-                
-                # Filtrar el DataFrame original para mantener los registros duplicados
-                duplicates_df = self.dataframe[duplicates_mask]
-                
-                # Mostrar el DataFrame con los registros duplicados
-                self.show_dataframe(duplicates_df)
-                
-            except Exception as e:
-                messagebox.showerror("Error", f"No se pudieron eliminar los duplicados: {str(e)}")
-    
-    def normalize_data(self):
-        if self.dataframe is None:
-            messagebox.showwarning("DataFrame no cargado", "Primero debe cargar un DataFrame antes de normalizar los datos.")
-            return
-        
-        try:
-            # Obtener la columna seleccionada para normalización
-            column_name = self.normalize_column_menu.get()
-            
-            # Normalizar los datos en la columna seleccionada
-            min_max_scaler = preprocessing.MinMaxScaler()
-            normalized_data = min_max_scaler.fit_transform(self.dataframe[[column_name]])
-            
-            # Actualizar el DataFrame con los datos normalizados
-            self.dataframe[column_name] = normalized_data
-            
-            # Mostrar el DataFrame actualizado
-            self.show_dataframe(self.dataframe)
-            
-        except Exception as e:
-            messagebox.showerror("Error", f"No se pudo normalizar los datos: {str(e)}")
     
     def show_dataframe(self, dataframe):
         # Limpiar árbol antes de cargar datos
@@ -277,6 +231,73 @@ class DataframeViewer:
         
         # Insertar datos en el árbol
         for index, row in dataframe.iterrows():
+            self.tree.insert("", tk.END, values=tuple(row))
+    
+    def normalize_data(self):
+        if self.dataframe is None:
+            messagebox.showwarning("DataFrame no cargado", "Primero debe cargar un DataFrame antes de normalizar los datos.")
+            return
+        
+        # Obtener la columna seleccionada
+        column_name = self.column_menu.get()
+        
+        # Menú desplegable para seleccionar el tipo de normalización
+        normalize_options = ["Convertir a Float", "Convertir a Fecha Corta", "Convertir a Fecha Larga"]
+        selected_option = tk.StringVar()
+        selected_option.set(normalize_options[0])  # Establecer la opción predeterminada
+        
+        # Función para realizar la normalización
+        def apply_normalization():
+            option = selected_option.get()
+            if option == "Convertir a Float":
+                self.convert_to_float(column_name)
+            elif option == "Convertir a Fecha Corta":
+                self.convert_to_short_date(column_name)
+            elif option == "Convertir a Fecha Larga":
+                self.convert_to_long_date(column_name)
+            normalization_dialog.destroy()
+        
+        # Cuadro de diálogo para seleccionar la opción de normalización
+        normalization_dialog = tk.Toplevel(self.root)
+        normalization_dialog.title("Normalizar Datos")
+        
+        option_label = tk.Label(normalization_dialog, text="Seleccione una opción de normalización:")
+        option_label.pack()
+        
+        option_menu = tk.OptionMenu(normalization_dialog, selected_option, *normalize_options)
+        option_menu.pack()
+        
+        apply_button = tk.Button(normalization_dialog, text="Aplicar", command=apply_normalization)
+        apply_button.pack()
+
+    def convert_to_float(self, column_name):
+        try:
+            self.dataframe[column_name] = self.dataframe[column_name].astype(float)
+            self.update_treeview()
+        except ValueError as e:
+            messagebox.showerror("Error de conversión", f"No se pudo convertir la columna '{column_name}' a tipo float: {e}")
+
+    def convert_to_short_date(self, column_name):
+        try:
+            self.dataframe[column_name] = pd.to_datetime(self.dataframe[column_name]).dt.strftime("%m/%d/%Y")
+            self.update_treeview()
+        except ValueError as e:
+            messagebox.showerror("Error de conversión", f"No se pudo convertir la columna '{column_name}' a fecha corta: {e}")
+
+    def convert_to_long_date(self, column_name):
+        try:
+            self.dataframe[column_name] = pd.to_datetime(self.dataframe[column_name]).dt.strftime("%B %d, %Y")
+            self.update_treeview()
+        except ValueError as e:
+            messagebox.showerror("Error de conversión", f"No se pudo convertir la columna '{column_name}' a fecha larga: {e}")
+
+    def update_treeview(self):
+        # Limpiar árbol antes de cargar datos
+        for child in self.tree.get_children():
+            self.tree.delete(child)
+        
+        # Insertar datos en el árbol
+        for index, row in self.dataframe.iterrows():
             self.tree.insert("", tk.END, values=tuple(row))
     
     def download_dataframe(self):
